@@ -60,6 +60,7 @@ def generate_signal(amplitude_entry, phase_entry, analog_freq_entry, sampling_fr
 def load_signal():
     file_path = filedialog.askopenfilename()
     global signal
+    signal=[]
     if file_path:
         try:
             with open(file_path, "r") as file:
@@ -397,6 +398,12 @@ def moving_average():
     average_signal = average_signal
     indices = [idx for idx, _ in average_signal]
     values = [value for _, value in average_signal]
+
+    if window_size==3:
+        CompareSignals("MovingAvg_out1.txt", indices, values)
+    elif window_size==5:
+        CompareSignals("MovingAvg_out2.txt", indices, values)
+
     plt.stem(indices, values, linefmt='b-', markerfmt='bo', basefmt='black')  # Discrete
     plt.title("Moving Average")
 
@@ -428,6 +435,8 @@ def sharpen():
 
     x_second = [item[0] for item in second_derivative]
     y_second = [item[1] for item in second_derivative]
+    CompareSignals("1st_derivative_out.txt", x_first, y_first)
+    CompareSignals("2nd_derivative_out.txt", x_second, y_second)
 
 
     plt.figure(figsize=(10, 6))
@@ -484,6 +493,7 @@ def convolution():
     y = y
     indices = [idx for idx, _ in y]
     values = [value for _, value in y]
+    CompareSignals("Conv_output.txt", indices, values)
     plt.plot(indices, values, marker='o', linestyle='-', color='b', label='Summed Signal')
     plt.xlabel('Index')
     plt.ylabel('Value')
@@ -491,3 +501,41 @@ def convolution():
     plt.grid(True)
     plt.legend()
     plt.show()
+
+
+
+def CompareSignals(file_name, Your_EncodedValues, Your_Values):
+    expectedIndices=[]
+    expectedValues=[]
+    with open(file_name, 'r') as f:
+        line = f.readline()
+        line = f.readline()
+        line = f.readline()
+        line = f.readline()
+        while line:
+            # process line
+            L=line.strip()
+            if len(L.split(' '))==2:
+                L=line.split(' ')
+                V2=int(L[0])
+                V3=float(L[1])
+                expectedIndices.append(V2)
+                expectedValues.append(V3)
+                line = f.readline()
+            else:
+                break
+    if( (len(Your_EncodedValues)!=len(expectedIndices)) or (len(Your_Values) != len(expectedValues))):
+
+        print("Test case failed, your signal have different length from the expected one")
+        return
+    for i in range(len(Your_EncodedValues)):
+        if(Your_EncodedValues[i]!=expectedIndices[i]):
+            print("Test case failed, your indices have different values from the expected one")
+            return
+    for i in range(len(expectedValues)):
+        if abs(Your_Values[i] - expectedValues[i]) < 0.01:
+            continue
+        else:
+            print("Test case failed, your Values have different values from the expected one")
+            return
+    print("Test case passed successfully")
