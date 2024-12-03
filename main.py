@@ -3,6 +3,10 @@ from tkinter import filedialog, messagebox, simpledialog, Toplevel, Radiobutton,
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy import ndarray
+import math
+import cmath
+import matplotlib.pyplot as plt
+
 
 signal = []
 signal2 = []
@@ -58,42 +62,101 @@ def generate_signal(amplitude_entry, phase_entry, analog_freq_entry, sampling_fr
 
 
 def load_signal():
-    file_path = filedialog.askopenfilename()
+    file_path = filedialog.askopenfilename()  # Open file dialog to choose file
     global signal
-    signal=[]
+    signal = []  # Reset signal list
+
     if file_path:
         try:
             with open(file_path, "r") as file:
                 lines = file.readlines()
-                origin_x = float(lines[0].strip())
-                origin_y = float(lines[1].strip())
-                N = int(lines[2].strip())
 
+                # Ensure there are at least 3 lines (2 to be ignored, 1 for N)
+                if len(lines) < 3:
+                    messagebox.showerror("Error", "File format is incorrect. It must contain at least 3 lines.")
+                    return
+
+                # Read origin_x, origin_y, and N from the first 3 lines
+                origin_x = float(lines[0].strip())  # First line - origin_x
+                origin_y = float(lines[1].strip())  # Second line - origin_y
+                N = int(lines[2].strip())  # Third line - number of data points
+
+                # Check if we have enough lines for the signal data
+                if len(lines) < N + 3:
+                    messagebox.showerror("Error", f"File format is incorrect. Expected {N} data points.")
+                    return
+
+                # Parse the amplitude and phase shift from the next N lines
                 for i in range(3, N + 3):
-                    idx, value = map(float, lines[i].split())
-                    signal.append((idx, value))
-            messagebox.showinfo("Success", "Signal loaded successfully!")
-        except Exception as e:
-            messagebox.showerror("Error", f"Error loading signal: {e}")
+                    try:
+                        # Remove 'f' from each value and split the line into amplitude and phase shift
+                        line = lines[i].strip()
+                        amplitude, phase_shift = line.split()  # Split by space
 
+                        # Remove the 'f' and convert to float
+                        amplitude = float(amplitude.replace('f', '').strip())
+                        phase_shift = float(phase_shift.replace('f', '').strip())
+
+                        # Append the tuple (amplitude, phase_shift) directly to signal
+                        signal.append((amplitude, phase_shift))  # Appending as a tuple
+                    except ValueError:
+                        messagebox.showerror("Error",
+                                             f"Invalid data on line {i + 1}. Expected 'amplitude phase_shift'.")
+                        return
+
+                # At this point, signal should be a list of tuples (amplitude, phase_shift)
+                messagebox.showinfo("Success", "Signal loaded successfully!")  # Success message
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Error loading signal: {e}")  # Show any other errors
 
 def load_signal2():
     file_path = filedialog.askopenfilename()
     global signal2
+    signal2=[]
     if file_path:
         try:
             with open(file_path, "r") as file:
                 lines = file.readlines()
-                origin_x2 = float(lines[0].strip())
-                origin_y2 = float(lines[1].strip())
-                N = int(lines[2].strip())
-                signal2 = []
+
+                # Ensure there are at least 3 lines (2 to be ignored, 1 for N)
+                if len(lines) < 3:
+                    messagebox.showerror("Error", "File format is incorrect. It must contain at least 3 lines.")
+                    return
+
+                # Read origin_x, origin_y, and N from the first 3 lines
+                origin_x = float(lines[0].strip())  # First line - origin_x
+                origin_y = float(lines[1].strip())  # Second line - origin_y
+                N = int(lines[2].strip())  # Third line - number of data points
+
+                # Check if we have enough lines for the signal data
+                if len(lines) < N + 3:
+                    messagebox.showerror("Error", f"File format is incorrect. Expected {N} data points.")
+                    return
+
+                # Parse the amplitude and phase shift from the next N lines
                 for i in range(3, N + 3):
-                    idx, value = map(float, lines[i].split())
-                    signal2.append((idx, value))
-            messagebox.showinfo("Success", "Second signal loaded successfully!")
+                    try:
+                        # Remove 'f' from each value and split the line into amplitude and phase shift
+                        line = lines[i].strip()
+                        amplitude, phase_shift = line.split()  # Split by space
+
+                        # Remove the 'f' and convert to float
+                        amplitude = float(amplitude.replace('f', '').strip())
+                        phase_shift = float(phase_shift.replace('f', '').strip())
+
+                        # Append the tuple (amplitude, phase_shift) directly to signal
+                        signal2.append((amplitude, phase_shift))  # Appending as a tuple
+                    except ValueError:
+                        messagebox.showerror("Error",
+                                             f"Invalid data on line {i + 1}. Expected 'amplitude phase_shift'.")
+                        return
+
+                # At this point, signal should be a list of tuples (amplitude, phase_shift)
+                messagebox.showinfo("Success", "Signal loaded successfully!")  # Success message
+
         except Exception as e:
-            messagebox.showerror("Error", f"Error loading second signal: {e}")
+            messagebox.showerror("Error", f"Error loading signal: {e}")  # Show any other errors
 
 
 def display_signal():
@@ -399,10 +462,6 @@ def moving_average():
     indices = [idx for idx, _ in average_signal]
     values = [value for _, value in average_signal]
 
-    if window_size==3:
-        CompareSignals("MovingAvg_out1.txt", indices, values)
-    elif window_size==5:
-        CompareSignals("MovingAvg_out2.txt", indices, values)
 
     plt.stem(indices, values, linefmt='b-', markerfmt='bo', basefmt='black')  # Discrete
     plt.title("Moving Average")
@@ -435,8 +494,7 @@ def sharpen():
 
     x_second = [item[0] for item in second_derivative]
     y_second = [item[1] for item in second_derivative]
-    CompareSignals("1st_derivative_out.txt", x_first, y_first)
-    CompareSignals("2nd_derivative_out.txt", x_second, y_second)
+
 
 
     plt.figure(figsize=(10, 6))
@@ -493,7 +551,6 @@ def convolution():
     y = y
     indices = [idx for idx, _ in y]
     values = [value for _, value in y]
-    CompareSignals("Conv_output.txt", indices, values)
     plt.plot(indices, values, marker='o', linestyle='-', color='b', label='Summed Signal')
     plt.xlabel('Index')
     plt.ylabel('Value')
@@ -504,38 +561,111 @@ def convolution():
 
 
 
-def CompareSignals(file_name, Your_EncodedValues, Your_Values):
-    expectedIndices=[]
-    expectedValues=[]
-    with open(file_name, 'r') as f:
-        line = f.readline()
-        line = f.readline()
-        line = f.readline()
-        line = f.readline()
-        while line:
-            # process line
-            L=line.strip()
-            if len(L.split(' '))==2:
-                L=line.split(' ')
-                V2=int(L[0])
-                V3=float(L[1])
-                expectedIndices.append(V2)
-                expectedValues.append(V3)
-                line = f.readline()
-            else:
-                break
-    if( (len(Your_EncodedValues)!=len(expectedIndices)) or (len(Your_Values) != len(expectedValues))):
+def dft():
+    signal_dict = {idx: value for idx, value in signal}
+    N = len(signal_dict)
+    # DFT computation
+    X = np.zeros(N, dtype=complex)
 
-        print("Test case failed, your signal have different length from the expected one")
-        return
-    for i in range(len(Your_EncodedValues)):
-        if(Your_EncodedValues[i]!=expectedIndices[i]):
-            print("Test case failed, your indices have different values from the expected one")
-            return
-    for i in range(len(expectedValues)):
-        if abs(Your_Values[i] - expectedValues[i]) < 0.01:
-            continue
-        else:
-            print("Test case failed, your Values have different values from the expected one")
-            return
-    print("Test case passed successfully")
+    for k in range(N):
+        for n in range(N):
+             X[k] += signal_dict.get(n, 0) * np.exp(-2j * np.pi * k * n / N)
+
+    X = np.round(X, decimals=10)
+    dft_amp = []
+    dft_phase = []
+    for k, value in enumerate(X):
+        val = abs(value)
+        dft_amp.append(val)
+        x = value.real
+        y = value.imag
+        phase_shift = math.atan2(y, x)
+        dft_phase.append(phase_shift)
+
+    sampling_freq = float(simpledialog.askstring("Input", "Enter the sampling frequency (Hz):"))
+    step = (sampling_freq*2*np.pi)/N
+    omega = []
+    for i in range (0,N):
+        omega.append(i*step)
+    out_amp, out_phase = zip(*signal2)
+    flag = SignalComapreAmplitude(out_amp, dft_amp)
+    flag1 = SignalComaprePhaseShift(out_phase,dft_phase)
+    if flag and flag1:
+        print("DFT test case passed successfully")
+    else:
+        print("DFT test failed")
+    plt.stem(omega, dft_amp, linefmt='b-', markerfmt='bo', basefmt='r-')
+    plt.title("DFT")
+    plt.xlabel("Ω")
+    plt.ylabel("Amplitude")
+    plt.grid(True)
+    plt.show()
+
+    plt.stem(omega, dft_phase, linefmt='b-', markerfmt='bo', basefmt='r-')
+    plt.title("DFT")
+    plt.xlabel("Ω")
+    plt.ylabel("Phase Shift")
+    plt.grid(True)
+    plt.show()
+
+
+
+
+def idft():
+    N = len(signal)  # Length of the signal
+    X = np.zeros(N, dtype=complex)
+    x_reconstructed = np.zeros(N, dtype=complex)
+
+    # Construct X(k) from amplitude and phase shift
+    for k, (amplitude, phase_shift) in enumerate(signal):
+        X[k] = amplitude * np.exp(1j * phase_shift)  # Ensure phase_shift is in radians
+
+    # Perform IDFT
+    for k in range(N):
+        for n in range(N):
+            x_reconstructed[n] += X[k] * np.exp(2j * np.pi * k * n / N)
+
+    # Scale by 1/N
+    x_reconstructed /= N
+    indices =[]
+    for i in range(0,N):
+        indices.append(i)
+    out_amp = [amp for _, amp in signal2]
+
+    if SignalComapreAmplitude(np.round(x_reconstructed.real, decimals=4),out_amp):
+        print("IDFT Test passed sucessfully")
+    else:
+        print("IDFT Test failed")
+
+    plt.stem(indices, np.round(x_reconstructed.real, decimals=4), linefmt='b-', markerfmt='bo', basefmt='r-')
+    plt.title("Reconstructed signal")
+    plt.xlabel("Index")
+    plt.ylabel("Value")
+    plt.grid(True)
+    plt.show()
+
+def SignalComapreAmplitude(SignalInput = [] ,SignalOutput= []):
+    if len(SignalInput) != len(SignalOutput):
+        return False
+    else:
+        for i in range(len(SignalInput)):
+            if abs(SignalInput[i]-SignalOutput[i])>0.001:
+                return False
+        return True
+
+def RoundPhaseShift(P):
+    while P<0:
+        P += 2*math.pi
+    return float(P % (2*math.pi))
+
+#Use to test the PhaseShift of DFT
+def SignalComaprePhaseShift(SignalInput = [] ,SignalOutput= []):
+    if len(SignalInput) != len(SignalOutput):
+        return False
+    else:
+        for i in range(len(SignalInput)):
+            A=round(SignalInput[i])
+            B=round(SignalOutput[i])
+            if abs(A-B)>0.0001:
+                return False
+        return True

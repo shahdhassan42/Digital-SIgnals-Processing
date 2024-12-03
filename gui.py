@@ -73,8 +73,14 @@ ttk.Button(root, text="Quantize Signal", width=20, command=quantize_signal).pack
 ttk.Button(root, text="Moving Average", width=20, command=moving_average).pack(pady=10)
 ttk.Button(root, text="Sharpen", width=20, command=sharpen).pack(pady=10)
 ttk.Button(root, text="Convolution", width=20, command=convolution).pack(pady=10)
+ttk.Button(root, text="DFT", width=20, command=dft).pack(pady=10)
+ttk.Button(root, text="IDFT", width=20, command=idft).pack(pady=10)
+
+
+
 
 ttk.Button(root, text="Exit", width=20, command=root.quit).pack(pady=10)
+
 
 # Function to open the signal generation menu
 
