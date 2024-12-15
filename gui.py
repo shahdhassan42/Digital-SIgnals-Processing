@@ -1,20 +1,23 @@
 import tkinter as tk
 from tkinter import ttk
 from main import *
+
 # Create the main GUI window
 root = tk.Tk()
 root.title("Signal Processing Tool")
-root.geometry("800x800")
+root.geometry("600x600")
+
+# Function to open the signal generation menu
 def open_signal_generation_menu():
-    new_window = Toplevel(root)
+    new_window = tk.Toplevel(root)
     new_window.title("Signal Generation")
     new_window.geometry("500x500")
 
     tk.Label(new_window, text="Select Signal Type:", font=("Arial", 12)).pack(pady=10)
 
-    signal_type_var = IntVar(value=1)
-    sine_rb = Radiobutton(new_window, text="Sine Wave", variable=signal_type_var, value=1)
-    cosine_rb = Radiobutton(new_window, text="Cosine Wave", variable=signal_type_var, value=2)
+    signal_type_var = tk.IntVar(value=1)
+    sine_rb = tk.Radiobutton(new_window, text="Sine Wave", variable=signal_type_var, value=1)
+    cosine_rb = tk.Radiobutton(new_window, text="Cosine Wave", variable=signal_type_var, value=2)
     sine_rb.pack()
     cosine_rb.pack()
 
@@ -35,56 +38,64 @@ def open_signal_generation_menu():
     sampling_freq_entry = tk.Entry(new_window)
     sampling_freq_entry.pack()
 
-    display_type_var = IntVar(value=1)
-    continuous_rb = Radiobutton(new_window, text="Continuous", variable=display_type_var, value=1)
-    discrete_rb = Radiobutton(new_window, text="Discrete", variable=display_type_var, value=2)
+    display_type_var = tk.IntVar(value=1)
+    continuous_rb = tk.Radiobutton(new_window, text="Continuous", variable=display_type_var, value=1)
+    discrete_rb = tk.Radiobutton(new_window, text="Discrete", variable=display_type_var, value=2)
     continuous_rb.pack(pady=5)
     discrete_rb.pack(pady=5)
 
     def call_gen_signal():
-        # Get values from the widgets
-        amplitude = amplitude_entry.get()  # Get string input from amplitude Entry
-        phase = phase_entry.get()  # Get string input from phase Entry
-        analog_freq = analog_freq_entry.get()  # Get string input from analog frequency Entry
-        sampling_freq = sampling_freq_entry.get()  # Get string input from sampling frequency Entry
-        signal_type = signal_type_var.get()  # Get value from signal type Radiobutton
-        display_type = display_type_var.get()  # Get value from display type Radiobutton
-
-        # Pass the extracted values to the generate_signal function
+        amplitude = amplitude_entry.get()
+        phase = phase_entry.get()
+        analog_freq = analog_freq_entry.get()
+        sampling_freq = sampling_freq_entry.get()
+        signal_type = signal_type_var.get()
+        display_type = display_type_var.get()
         generate_signal(amplitude, phase, analog_freq, sampling_freq, signal_type, display_type)
 
     generate_btn = tk.Button(new_window, text="Generate Signal", command=call_gen_signal)
     generate_btn.pack(pady=20)
+
 # Add the GUI elements
-ttk.Label(root, text="Signal Processing Tool", font=("Arial", 20)).pack(pady=20)
+ttk.Label(root, text="Signal Processing Tool", font=("Arial", 20)).grid(row=0, column=1, columnspan=2, pady=30)
 
-# Buttons for various signal processing actions
-ttk.Button(root, text="Load Signal", width=20, command=load_signal).pack(pady=10)
-ttk.Button(root, text="Display Signal", width=20, command=display_signal).pack(pady=10)
-ttk.Button(root, text="Load Second Signal", width=20, command=load_signal2).pack(pady=10)
-ttk.Button(root, text="Display Both Signals", width=20, command=display_both_signals).pack(pady=10)
-ttk.Button(root, text="Add Signals", width=20, command=add_signals).pack(pady=10)
-ttk.Button(root, text="Multiply Signal", width=20, command=multiply_signal).pack(pady=10)
-ttk.Button(root, text="Subtract Signals", width=20, command=subtract_signals).pack(pady=10)
-ttk.Button(root, text="Delay/Advance Signal", width=20, command=delay_advance_signal).pack(pady=10)
-ttk.Button(root, text="Fold/Reverse Signal", width=20, command=fold_signal).pack(pady=10)
-ttk.Button(root, text="Signal Generation", width=20, command=open_signal_generation_menu).pack(pady=10)
-ttk.Button(root, text="Quantize Signal", width=20, command=quantize_signal).pack(pady=10)
-ttk.Button(root, text="Moving Average", width=20, command=moving_average).pack(pady=10)
-ttk.Button(root, text="Sharpen", width=20, command=sharpen).pack(pady=10)
-ttk.Button(root, text="Convolution", width=20, command=convolution).pack(pady=10)
-ttk.Button(root, text="DFT", width=20, command=dft).pack(pady=10)
-ttk.Button(root, text="IDFT", width=20, command=idft).pack(pady=10)
+# Configure the grid to center buttons
+total_columns = 4  # Example: 2 columns for buttons + 2 for padding
+for col in range(total_columns):
+    root.grid_columnconfigure(col, weight=1)  # Equal weight for all columns to center-align
 
+# List of button labels and corresponding commands
+buttons = [
+    ("Load Signal", load_signal),
+    ("Display Signal", display_signal),
+    ("Load Second Signal", load_signal2),
+    ("Display Both Signals", display_both_signals),
+    ("Add Signals", add_signals),
+    ("Multiply Signal", multiply_signal),
+    ("Subtract Signals", subtract_signals),
+    ("Delay/Advance Signal", delay_advance_signal),
+    ("Fold/Reverse Signal", fold_signal),
+    ("Signal Generation", open_signal_generation_menu),
+    ("Quantize Signal", quantize_signal),
+    ("Moving Average", moving_average),
+    ("Sharpen", sharpen),
+    ("Convolution", convolution),
+    ("DFT", dft),
+    ("IDFT", idft),
+    ("Correlation", correlation),
+    ("Classify signals", classify_all_signals),
+]
 
+# Create buttons and arrange them in a grid
+for index, (text, command) in enumerate(buttons):
+    row = (index // 2) + 1  # Start rows from 1 to leave space for the title
+    col = (index % 2) + 1  # Shift columns by 1 to account for left padding
+    ttk.Button(root, text=text, width=20, command=command).grid(row=row, column=col, padx=10, pady=10)
 
-
-ttk.Button(root, text="Exit", width=20, command=root.quit).pack(pady=10)
-
-
-# Function to open the signal generation menu
-
-
+# Exit button, centered below other buttons
+ttk.Button(root, text="Exit", width=20, command=root.quit).grid(
+    row=(len(buttons) // 2) + 2, column=1, columnspan=2, pady=20
+)
 
 # Run the GUI loop
 root.mainloop()

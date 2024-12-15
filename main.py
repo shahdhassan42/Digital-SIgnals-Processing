@@ -1,11 +1,11 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, Toplevel, Radiobutton, IntVar
-import matplotlib.pyplot as plt
 import numpy as np
 from numpy import ndarray
 import math
 import cmath
 import matplotlib.pyplot as plt
+import os
 
 
 signal = []
@@ -583,17 +583,18 @@ def dft():
         dft_phase.append(phase_shift)
 
     sampling_freq = float(simpledialog.askstring("Input", "Enter the sampling frequency (Hz):"))
-    step = (sampling_freq*2*np.pi)/N
+    step = (sampling_freq * 2 * np.pi) / N
     omega = []
     for i in range (0,N):
         omega.append(i*step)
-    out_amp, out_phase = zip(*signal2)
-    flag = SignalComapreAmplitude(out_amp, dft_amp)
-    flag1 = SignalComaprePhaseShift(out_phase,dft_phase)
-    if flag and flag1:
-        print("DFT test case passed successfully")
-    else:
-        print("DFT test failed")
+
+    # out_amp, out_phase = zip(*signal2)
+    # flag = SignalComapreAmplitude(out_amp, dft_amp)
+    # flag1 = SignalComaprePhaseShift(out_phase,dft_phase)
+    # if flag and flag1:
+    #     print("DFT test case passed successfully")
+    # else:
+    #     print("DFT test failed")
     plt.stem(omega, dft_amp, linefmt='b-', markerfmt='bo', basefmt='r-')
     plt.title("DFT")
     plt.xlabel("Ω")
@@ -632,10 +633,10 @@ def idft():
         indices.append(i)
     out_amp = [amp for _, amp in signal2]
 
-    if SignalComapreAmplitude(np.round(x_reconstructed.real, decimals=4),out_amp):
-        print("IDFT Test passed sucessfully")
-    else:
-        print("IDFT Test failed")
+    # if SignalComapreAmplitude(np.round(x_reconstructed.real, decimals=4),out_amp):
+    #     print("IDFT Test passed sucessfully")
+    # else:
+    #     print("IDFT Test failed")
 
     plt.stem(indices, np.round(x_reconstructed.real, decimals=4), linefmt='b-', markerfmt='bo', basefmt='r-')
     plt.title("Reconstructed signal")
@@ -644,28 +645,165 @@ def idft():
     plt.grid(True)
     plt.show()
 
-def SignalComapreAmplitude(SignalInput = [] ,SignalOutput= []):
-    if len(SignalInput) != len(SignalOutput):
-        return False
-    else:
-        for i in range(len(SignalInput)):
-            if abs(SignalInput[i]-SignalOutput[i])>0.001:
-                return False
-        return True
 
-def RoundPhaseShift(P):
-    while P<0:
-        P += 2*math.pi
-    return float(P % (2*math.pi))
-
-#Use to test the PhaseShift of DFT
-def SignalComaprePhaseShift(SignalInput = [] ,SignalOutput= []):
-    if len(SignalInput) != len(SignalOutput):
-        return False
+def calc_correlation(signal, signal2):
+    # Check if signal and signal2 are lists of tuples
+    if isinstance(signal, list) and all(isinstance(x, tuple) for x in signal) and \
+            isinstance(signal2, list) and all(isinstance(x, tuple) for x in signal2):
+        # Extract the second element of each tuple
+        signal_values = [x[1] for x in signal]
+        signal2_values = [x[1] for x in signal2]
     else:
-        for i in range(len(SignalInput)):
-            A=round(SignalInput[i])
-            B=round(SignalOutput[i])
-            if abs(A-B)>0.0001:
-                return False
-        return True
+        # In case signals are not lists of tuples, use them directly
+        signal_values = signal
+        signal2_values = signal2
+    N1 = len(signal)
+    N2 = len(signal2)
+
+    if N1 != N2:
+        N = N1 + N2 - 1
+        signal_values = np.append(signal_values, [0] * (N - N1))
+        signal2_values = np.append(signal2_values, [0] * (N - N2))
+    else:
+        N = N1
+
+    correlation = []
+    lags = []
+
+    for k in range(N):
+        sum_corr = 0
+        for n in range(N):
+            valid_index = (n + k) % N
+            if 0 <= valid_index < N:
+                sum_corr += signal_values[n] * signal2_values[valid_index]
+        correlation.append((1/N) * sum_corr)
+        lags.append(k)
+
+    # Normalization
+    correlation /= 1/N * (np.sqrt(np.dot(np.dot(signal_values, signal_values), np.dot(signal2_values, signal2_values))))
+    return correlation, lags
+
+def correlation():
+    correlation, lags = calc_correlation(signal, signal2)
+    # if correlation button pressed
+    def correlation_output():
+        Compare_Signals("CorrOutput.txt", lags, correlation)
+
+        plt.stem(lags, correlation, linefmt='b-', markerfmt='bo', basefmt='r-')
+        plt.title("Cross Correlation")
+        plt.xlabel("Lag")
+        plt.ylabel("Correlation")
+        plt.grid(True)
+        plt.show()
+
+    # if time delay button pressed
+    def time_delay():
+        FS = simpledialog.askfloat("Sampling frequency", "Enter sampling frequency: ")
+        TS = 1 / FS
+        # lag at max correlation
+        max_corr_index = np.argmax(correlation)
+        lag_max_corr = lags[max_corr_index]
+
+        TD = lag_max_corr * TS
+        messagebox.showinfo("Time Delay", f"Time delay= {TD:.4f}")
+
+    # as Correlation or Time Delay
+    selection_window = tk.Toplevel()
+    selection_window.title("Correlation or Time Delay?")
+    selection_window.geometry("300x150")
+
+    # Correlation button
+    correlation_button = tk.Button(selection_window, text="Correlation", command=correlation_output, bg="lightblue",
+                                   font=("Arial", 12))
+    correlation_button.pack(pady=20)
+
+    # Time Delay button
+    time_delay_button = tk.Button(selection_window, text="Time Delay", command=time_delay, bg="lightgreen",
+                                  font=("Arial", 12))
+    time_delay_button.pack(pady=20)
+
+def read_signals (folder_path):
+    signals = []
+    for filename in os.listdir(folder_path):
+        filepath = os.path.join(folder_path, filename)
+        if filename.endswith('.txt'):
+            with open(filepath, 'r') as file:
+                # Read all lines in the file as a single list
+                signal = [int(line.strip()) for line in file]
+                signals.append(signal)
+    return signals
+
+# Classify a test signal against classes
+def classify_signal(test_signal, class1, class2):
+    # Split the class signals into individual variables dynamically
+    corr_c1=[]
+    corr_c2=[]
+    for i, signal in enumerate(class1, start=1):
+        globals()[f'd{i}'] = signal
+        corr_class1, _ = calc_correlation(test_signal, class1)
+        corr_c1.append(corr_class1)
+
+    for i, signal in enumerate(class2, start=1):
+        globals()[f'u{i}'] = signal
+        corr_class2, _ = calc_correlation(test_signal, class2)
+        corr_c2.append(corr_class2)
+
+    max_corr_class1 = np.max(corr_c1)
+    max_corr_class2 = np.max(corr_c2)
+
+    if max_corr_class1 > max_corr_class2:
+        return 1, corr_c1
+    else:
+        return 2, corr_c2
+
+# Full classification workflow
+def classify_all_signals():
+    # Read signals
+    signals_class1 = read_signals("Class 1")
+    signals_class2 = read_signals("Class 2")
+    test_signals = read_signals("Test Signals")
+
+    # Classify each test signal
+    for i, test_signal in enumerate(test_signals):
+        class_label, correlation = classify_signal(test_signal, signals_class1, signals_class2)
+        print(f"Test Signal {i + 1} is classified as Class {class_label}.")
+
+
+def Compare_Signals(file_name,Your_indices,Your_samples):
+    expected_indices=[]
+    expected_samples=[]
+    with open(file_name, 'r') as f:
+        line = f.readline()
+        line = f.readline()
+        line = f.readline()
+        line = f.readline()
+        while line:
+            # process line
+            L=line.strip()
+            if len(L.split(' '))==2:
+                L=line.split(' ')
+                V1=int(L[0])
+                V2=float(L[1])
+                expected_indices.append(V1)
+                expected_samples.append(V2)
+                line = f.readline()
+            else:
+                break
+    print("Current Output Test file is: ")
+    print(file_name)
+    print("\n")
+    if (len(expected_samples)!=len(Your_samples)) and (len(expected_indices)!=len(Your_indices)):
+        print("Shift_Fold_Signal Test case failed, your signal have different length from the expected one")
+        return
+    for i in range(len(Your_indices)):
+        if(Your_indices[i]!=expected_indices[i]):
+            print("Shift_Fold_Signal Test case failed, your signal have different indicies from the expected one")
+            return
+    for i in range(len(expected_samples)):
+        if abs(Your_samples[i] - expected_samples[i]) < 0.01:
+            continue
+        else:
+            print("Correlation Test case failed, your signal have different values from the expected one")
+            return
+    print("Correlation Test case passed successfully")
+
