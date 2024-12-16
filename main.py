@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 from tkinter import filedialog, messagebox, simpledialog, Toplevel, Radiobutton, IntVar
 import numpy as np
 from numpy import ndarray
@@ -707,7 +708,7 @@ def correlation():
         TD = lag_max_corr * TS
         messagebox.showinfo("Time Delay", f"Time delay= {TD:.4f}")
 
-    # as Correlation or Time Delay
+    # ask Correlation or Time Delay
     selection_window = tk.Toplevel()
     selection_window.title("Correlation or Time Delay?")
     selection_window.geometry("300x150")
@@ -768,6 +769,71 @@ def classify_all_signals():
         class_label, correlation = classify_signal(test_signal, signals_class1, signals_class2)
         print(f"Test Signal {i + 1} is classified as Class {class_label}.")
 
+def filters():
+    # specifications
+    def specifications():
+        specifications_window = tk.Toplevel()
+        specifications_window.title("Specifications")
+        specifications_window.geometry("350x240")
+
+        tk.Label(specifications_window, text="Sampling Frequency (Hz):").grid(row=0, column=0, padx=10, pady=5,
+                                                                              sticky="w")
+        entry_fs = tk.Entry(specifications_window)
+        entry_fs.grid(row=0, column=1, padx=10, pady=5)
+
+
+        if (combo_filter_type.get() == "Low" or combo_filter_type.get() == "High"):
+            tk.Label(specifications_window, text="Cut-off Frequency (Hz):").grid(row=2, column=0, padx=10, pady=5,
+                                                                                 sticky="w")
+            entry_fc = tk.Entry(specifications_window)
+            entry_fc.grid(row=2, column=1, padx=10, pady=5)
+
+
+        else:
+            tk.Label(specifications_window, text="Lower Cut-off Frequency (Hz):").grid(row=3, column=0, padx=10, pady=5,
+                                                                                       sticky="w")
+            entry_f1 = tk.Entry(specifications_window)
+            entry_f1.grid(row=3, column=1, padx=10, pady=5)
+
+
+            tk.Label(specifications_window, text="Upper Cut-off Frequency (Hz):").grid(row=4, column=0, padx=10, pady=5,
+                                                                                       sticky="w")
+            entry_f2 = tk.Entry(specifications_window)
+            entry_f2.grid(row=4, column=1, padx=10, pady=5)
+
+
+        tk.Label(specifications_window, text="Stop Attenuation (dB):").grid(row=5, column=0, padx=10, pady=5,
+                                                                            sticky="w")
+        entry_stop_att = tk.Entry(specifications_window)
+        entry_stop_att.grid(row=5, column=1, padx=10, pady=5)
+
+
+        tk.Label(specifications_window, text="Transition Band Width (Hz):").grid(row=6, column=0, padx=10, pady=5,
+                                                                                 sticky="w")
+        entry_trans_band = tk.Entry(specifications_window)
+        entry_trans_band.grid(row=6, column=1, padx=10, pady=5)
+
+        # Button to design filter
+        btn_design = tk.Button(specifications_window, text="Design Filter", command=design_filter)
+        btn_design.grid(row=7, column=0, columnspan=2, pady=20)
+
+    # Filter type
+    type_window = tk.Toplevel()
+    type_window.title("Filter type")
+    type_window.geometry("250x100")
+
+    tk.Label(type_window, text="Filter Type:").grid(row=1, column=0, padx=10, pady=5, sticky="w")
+    combo_filter_type = ttk.Combobox(type_window, values=["Low", "High", "Band pass", "Band stop"], state="readonly")
+    combo_filter_type.grid(row=1, column=1, padx=10, pady=5)
+
+    # Button to get specification
+    btn_specifications = tk.Button(type_window, text="Input specifications", command=specifications)
+    btn_specifications.grid(row=7, column=0, columnspan=2, pady=20)
+
+
+def design_filter():
+
+    return
 
 def Compare_Signals(file_name,Your_indices,Your_samples):
     expected_indices=[]

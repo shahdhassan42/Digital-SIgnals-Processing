@@ -84,6 +84,7 @@ buttons = [
     ("IDFT", idft),
     ("Correlation", correlation),
     ("Classify signals", classify_all_signals),
+    ("Filtering", filters),
 ]
 
 # Create buttons and arrange them in a grid
