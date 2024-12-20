@@ -7,8 +7,7 @@ import math
 import cmath
 import matplotlib.pyplot as plt
 import os
-
-
+import itertools
 signal = []
 signal2 = []
 
@@ -111,10 +110,11 @@ def load_signal():
         except Exception as e:
             messagebox.showerror("Error", f"Error loading signal: {e}")  # Show any other errors
 
+
 def load_signal2():
     file_path = filedialog.askopenfilename()
     global signal2
-    signal2=[]
+    signal2 = []
     if file_path:
         try:
             with open(file_path, "r") as file:
@@ -310,7 +310,6 @@ def delay_advance_signal():
     plt.show()
 
 
-
 def subtract_signals():
     signal_dict = {idx: value for idx, value in signal}
     signal2_dict = {idx: value for idx, value in signal2}
@@ -463,7 +462,6 @@ def moving_average():
     indices = [idx for idx, _ in average_signal]
     values = [value for _, value in average_signal]
 
-
     plt.stem(indices, values, linefmt='b-', markerfmt='bo', basefmt='black')  # Discrete
     plt.title("Moving Average")
 
@@ -496,8 +494,6 @@ def sharpen():
     x_second = [item[0] for item in second_derivative]
     y_second = [item[1] for item in second_derivative]
 
-
-
     plt.figure(figsize=(10, 6))
 
     # First Derivative
@@ -522,36 +518,43 @@ def sharpen():
     plt.show()
 
 
-
-def convolution():
+def convolution(signal, signal2):
     if signal is None or signal2 is None:
         messagebox.showerror("Error", "Both signals must be loaded!")
         return
 
-    signal_dict = {idx: value for idx, value in signal}
-    signal2_dict = {idx: value for idx, value in signal2}
-    signal1_first = int(next(iter(signal_dict)))
-    signal1_last = int(next(reversed(signal_dict)))
-    signal2_first = int(next(iter(signal2_dict)))
-    signal2_last = int(next(reversed(signal2_dict)))
+    # Extract indices and values from the input lists
+    signal_indices, signal_values = zip(*signal)
+    signal2_indices, signal2_values = zip(*signal2)
 
+    # Determine the first and last indices of both signals
+    signal1_first, signal1_last = signal_indices[0], signal_indices[-1]
+    signal2_first, signal2_last = signal2_indices[0], signal2_indices[-1]
+
+    # Calculate the convolution range
     start = signal1_first + signal2_first
     end = signal1_last + signal2_last
 
+    # Convert start and end to integers for the range function
+    start = int(start)
+    end = int(end)
+
+    # Perform convolution using lists
     y = []
     for n in range(start, end + 1):
         counter = 0
-        for k in range(signal1_first, signal1_last + 1):
-
-            if n - k < signal2_first:
-                break
-            else:
-                counter += signal_dict.get(k, 0) * signal2_dict.get(n - k, 0)
-
+        for k, value1 in zip(signal_indices, signal_values):
+            if n - k < signal2_first or n - k > signal2_last:
+                continue
+            index2 = n - k - signal2_first  # Align with signal2's index
+            counter += value1 * signal2_values[int(index2)]
         y.append((n, counter))
-    y = y
+
+    # Extract indices and values for plotting
     indices = [idx for idx, _ in y]
     values = [value for _, value in y]
+
+    # Plot the convolution result
     plt.plot(indices, values, marker='o', linestyle='-', color='b', label='Summed Signal')
     plt.xlabel('Index')
     plt.ylabel('Value')
@@ -560,67 +563,28 @@ def convolution():
     plt.legend()
     plt.show()
 
+    return y
 
 
-def dft():
-    signal_dict = {idx: value for idx, value in signal}
-    N = len(signal_dict)
-    # DFT computation
+def dft(signal):
+    signal2 = np.array(signal)
+    values = signal2[:, 1]
+    N = len(values)
+    # # DFT computation
     X = np.zeros(N, dtype=complex)
-
+    #
     for k in range(N):
-        for n in range(N):
-             X[k] += signal_dict.get(n, 0) * np.exp(-2j * np.pi * k * n / N)
+         for n in range(N):
+              X[k] += values[n]* np.exp(-2j * np.pi * k * n / N)
 
     X = np.round(X, decimals=10)
-    dft_amp = []
-    dft_phase = []
-    for k, value in enumerate(X):
-        val = abs(value)
-        dft_amp.append(val)
-        x = value.real
-        y = value.imag
-        phase_shift = math.atan2(y, x)
-        dft_phase.append(phase_shift)
 
-    sampling_freq = float(simpledialog.askstring("Input", "Enter the sampling frequency (Hz):"))
-    step = (sampling_freq * 2 * np.pi) / N
-    omega = []
-    for i in range (0,N):
-        omega.append(i*step)
-
-    # out_amp, out_phase = zip(*signal2)
-    # flag = SignalComapreAmplitude(out_amp, dft_amp)
-    # flag1 = SignalComaprePhaseShift(out_phase,dft_phase)
-    # if flag and flag1:
-    #     print("DFT test case passed successfully")
-    # else:
-    #     print("DFT test failed")
-    plt.stem(omega, dft_amp, linefmt='b-', markerfmt='bo', basefmt='r-')
-    plt.title("DFT")
-    plt.xlabel("Ω")
-    plt.ylabel("Amplitude")
-    plt.grid(True)
-    plt.show()
-
-    plt.stem(omega, dft_phase, linefmt='b-', markerfmt='bo', basefmt='r-')
-    plt.title("DFT")
-    plt.xlabel("Ω")
-    plt.ylabel("Phase Shift")
-    plt.grid(True)
-    plt.show()
+    return X
 
 
-
-
-def idft():
-    N = len(signal)  # Length of the signal
-    X = np.zeros(N, dtype=complex)
+def idft(X):
+    N = len(X)  # Length of the signal
     x_reconstructed = np.zeros(N, dtype=complex)
-
-    # Construct X(k) from amplitude and phase shift
-    for k, (amplitude, phase_shift) in enumerate(signal):
-        X[k] = amplitude * np.exp(1j * phase_shift)  # Ensure phase_shift is in radians
 
     # Perform IDFT
     for k in range(N):
@@ -629,22 +593,7 @@ def idft():
 
     # Scale by 1/N
     x_reconstructed /= N
-    indices =[]
-    for i in range(0,N):
-        indices.append(i)
-    out_amp = [amp for _, amp in signal2]
-
-    # if SignalComapreAmplitude(np.round(x_reconstructed.real, decimals=4),out_amp):
-    #     print("IDFT Test passed sucessfully")
-    # else:
-    #     print("IDFT Test failed")
-
-    plt.stem(indices, np.round(x_reconstructed.real, decimals=4), linefmt='b-', markerfmt='bo', basefmt='r-')
-    plt.title("Reconstructed signal")
-    plt.xlabel("Index")
-    plt.ylabel("Value")
-    plt.grid(True)
-    plt.show()
+    return x_reconstructed.real
 
 
 def calc_correlation(signal, signal2):
@@ -677,18 +626,21 @@ def calc_correlation(signal, signal2):
             valid_index = (n + k) % N
             if 0 <= valid_index < N:
                 sum_corr += signal_values[n] * signal2_values[valid_index]
-        correlation.append((1/N) * sum_corr)
+        correlation.append((1 / N) * sum_corr)
         lags.append(k)
 
     # Normalization
-    correlation /= 1/N * (np.sqrt(np.dot(np.dot(signal_values, signal_values), np.dot(signal2_values, signal2_values))))
+    correlation /= 1 / N * (
+        np.sqrt(np.dot(np.dot(signal_values, signal_values), np.dot(signal2_values, signal2_values))))
     return correlation, lags
+
 
 def correlation():
     correlation, lags = calc_correlation(signal, signal2)
+
     # if correlation button pressed
     def correlation_output():
-        Compare_Signals("CorrOutput.txt", lags, correlation)
+        corr_Compare_Signals("CorrOutput.txt", lags, correlation)
 
         plt.stem(lags, correlation, linefmt='b-', markerfmt='bo', basefmt='r-')
         plt.title("Cross Correlation")
@@ -723,7 +675,8 @@ def correlation():
                                   font=("Arial", 12))
     time_delay_button.pack(pady=20)
 
-def read_signals (folder_path):
+
+def read_signals(folder_path):
     signals = []
     for filename in os.listdir(folder_path):
         filepath = os.path.join(folder_path, filename)
@@ -734,11 +687,12 @@ def read_signals (folder_path):
                 signals.append(signal)
     return signals
 
+
 # Classify a test signal against classes
 def classify_signal(test_signal, class1, class2):
     # Split the class signals into individual variables dynamically
-    corr_c1=[]
-    corr_c2=[]
+    corr_c1 = []
+    corr_c2 = []
     for i, signal in enumerate(class1, start=1):
         globals()[f'd{i}'] = signal
         corr_class1, _ = calc_correlation(test_signal, class1)
@@ -769,72 +723,386 @@ def classify_all_signals():
         class_label, correlation = classify_signal(test_signal, signals_class1, signals_class2)
         print(f"Test Signal {i + 1} is classified as Class {class_label}.")
 
+
 def filters():
-    # specifications
+    def design_filter():
+        try:
+            fs = float(entry_fs.get())
+            stop_attenuation = float(entry_stop_att.get())
+            transition_band = float(entry_trans_band.get())
+            conv_type=entry_conv_type.get()
+
+            if combo_filter_type.get() in ["Low", "High"]:
+                cutoff_frequency = float(entry_fc.get())
+
+            else:
+
+                lower_cutoff = float(entry_f1.get())
+                upper_cutoff = float(entry_f2.get())
+        except ValueError as e:
+            tk.messagebox.showerror("Error", f"Invalid input: {e}")
+        delta_f = transition_band / fs
+        if stop_attenuation <= 21:
+            wf = "rect"
+            N = math.ceil(0.9 / delta_f)
+        elif stop_attenuation > 21 and stop_attenuation <= 44:
+            wf = "hanning"
+            N = math.ceil(3.1 / delta_f)
+        elif stop_attenuation > 44 and stop_attenuation <= 53:
+            wf = "hamming"
+            N = math.ceil(3.3 / delta_f)
+        elif stop_attenuation > 53 and stop_attenuation <= 74:
+            wf = "blackman"
+            N = math.ceil(5.5 / delta_f)
+
+        if N % 2 == 0:
+            N += 1
+        start = -int(N / 2)
+        end = int(N / 2)
+        h = []
+
+        if (combo_filter_type.get() == "Low"):
+            fc = (cutoff_frequency + (transition_band / 2)) / fs
+            for n in range(start, end + 1):
+                if wf == "rect":
+                    w = 1
+                    if n == 0:
+                        hd = 2 * fc
+                    else:
+                        hd = 2 * fc * (math.sin(n * 2 * math.pi * fc) / n * 2 * math.pi * fc)
+                elif wf == "hanning":
+                    w = 0.5 + 0.5 * math.cos((2 * math.pi * n) / N)
+                    if n == 0:
+                        hd = 2 * fc
+                    else:
+                        hd = 2 * fc * (math.sin(n * 2 * math.pi * fc) / n * 2 * math.pi * fc)
+                elif wf == "hamming":
+                    w = 0.54 + 0.46 * math.cos((2 * math.pi * n) / N)
+                    if n == 0:
+                        hd = 2 * fc
+                    else:
+                        hd = (2 * fc) / (n * 2 * math.pi * fc) * (math.sin(n * 2 * math.pi * fc))
+                elif wf == "blackman":
+                    w = 0.42 + 0.5 * math.cos((2 * math.pi * n) / N - 1) + 0.08 * math.cos((4 * math.pi * n) / N - 1)
+                    if n == 0:
+                        hd = 2 * fc
+                    else:
+                        hd = 2 * fc * (math.sin(n * 2 * math.pi * fc) / n * 2 * math.pi * fc)
+                h.append((n, hd * w))
+            indices = [x[0] for x in h]
+            samples = [x[1] for x in h]
+            Compare_Signals("LPFCoefficients.txt", indices, samples)
+            with open('Low pass coefficients.txt', 'w') as f:
+                f.write(str(h))
+
+            if conv_type == "Direct":
+              conv_res = convolution(signal, h)
+              indices = [x[0] for x in conv_res]
+              samples = [x[1] for x in conv_res]
+              Compare_Signals("ecg_low_pass_filtered.txt", indices, samples)
+            else:
+              conv_res = fast_convolution(signal, h)
+              indices = [x[0] for x in conv_res]
+              samples = [x[1] for x in conv_res]
+              Compare_Signals("ecg_low_pass_filtered.txt", indices, samples)
+
+        elif (combo_filter_type.get() == "High"):
+            fc = (cutoff_frequency - (transition_band / 2)) / fs  # Normalized cutoff frequency for high-pass
+            for n in range(start, end + 1):
+                if wf == "rect":
+                    w = 1
+                    if n == 0:
+                        hd = 1 - 2 * fc
+                    else:
+                        hd = -2 * fc * (math.sin(n * 2 * math.pi * fc) / (n * 2 * math.pi * fc))
+                elif wf == "hanning":
+                    w = 0.5 + 0.5 * math.cos((2 * math.pi * n) / N)
+                    if n == 0:
+                        hd = 1 - 2 * fc
+                    else:
+                        hd = -2 * fc * (math.sin(n * 2 * math.pi * fc) / (n * 2 * math.pi * fc))
+                elif wf == "hamming":
+                    w = 0.54 + 0.46 * math.cos((2 * math.pi * n) / N)
+                    if n == 0:
+                        hd = 1 - 2 * fc
+                    else:
+                        hd = (-2 * fc) / (n * 2 * math.pi * fc) * (math.sin(n * 2 * math.pi * fc))
+                elif wf == "blackman":
+                    w = 0.42 + 0.5 * math.cos((2 * math.pi * n) / (N - 1)) + 0.08 * math.cos(
+                        (4 * math.pi * n) / (N - 1))
+                    if n == 0:
+                        hd = 1 - 2 * fc
+                    else:
+                        hd = -2 * fc * (math.sin(n * 2 * math.pi * fc) / (n * 2 * math.pi * fc))
+                h.append((n, hd * w))
+                # print(f"{n}   {hd*w}")
+
+            indices = [x[0] for x in h]
+            samples = [x[1] for x in h]
+            Compare_Signals("HPFCoefficients.txt", indices, samples)
+            with open('high pass coefficients.txt', 'w') as f:
+                f.write(str(h))
+
+            if conv_type == "Direct":
+                conv_res = convolution(signal, h)
+                indices = [x[0] for x in conv_res]
+                samples = [x[1] for x in conv_res]
+                Compare_Signals("ecg_high_pass_filtered.txt", indices, samples)
+            else:
+                conv_res = fast_convolution(signal, h)
+                indices = [x[0] for x in conv_res]
+                samples = [x[1] for x in conv_res]
+                Compare_Signals("ecg_high_pass_filtered.txt", indices, samples)
+
+        elif (combo_filter_type.get() == "Band pass"):
+            f1 = (lower_cutoff - (transition_band / 2)) / fs
+            f2 = (upper_cutoff + (transition_band / 2)) / fs
+            for n in range(start, end + 1):
+                if wf == "rect":
+                    w = 1
+                    if n == 0:
+                        hd = 2 * (f2 - f1)
+                    else:
+                        hd = (2 * f2 * (math.sin(n * 2 * math.pi * f2) / (n * 2 * math.pi * f2))) - (2 * f1 * (math.sin(n * 2 * math.pi * f1) / (n * 2 * math.pi * f1)))
+                elif wf == "hanning":
+                    w = 0.5 + 0.5 * math.cos((2 * math.pi * n) / N)
+                    if n == 0:
+                        hd = 2 * (f2 - f1)
+                    else:
+                        hd = (2 * f2 * (math.sin(n * 2 * math.pi * f2) / (n * 2 * math.pi * f2))) - (2 * f1 * (math.sin(n * 2 * math.pi * f1) / (n * 2 * math.pi * f1)))
+                elif wf == "hamming":
+                    w = 0.54 + 0.46 * math.cos((2 * math.pi * n) / N)
+                    if n == 0:
+                        hd = 2 * (f2 - f1)
+                    else:
+                        hd = (2 * f2 * (math.sin(n * 2 * math.pi * f2) / (n * 2 * math.pi * f2))) - (2 * f1 * (math.sin(n * 2 * math.pi * f1) / (n * 2 * math.pi * f1)))
+                elif wf == "blackman":
+                    w = 0.42 + 0.5 * math.cos((2 * math.pi * n) / (N - 1)) + 0.08 * math.cos(
+                        (4 * math.pi * n) / (N - 1))
+                    if n == 0:
+                        hd = 2 * (f2 - f1)
+                    else:
+                        hd = (2 * f2 * (math.sin(n * 2 * math.pi * f2) / (n * 2 * math.pi * f2))) - (2 * f1 * (math.sin(n * 2 * math.pi * f1) / (n * 2 * math.pi * f1)))
+                h.append((n, hd * w))
+                # print(f"{n}   {hd*w}")
+            indices = [x[0] for x in h]
+            samples = [x[1] for x in h]
+            Compare_Signals("BPFCoefficients.txt", indices, samples)
+            with open('band pass coefficients.txt', 'w') as f:
+                f.write(str(h))
+
+            if conv_type == "Direct":
+                conv_res = convolution(signal, h)
+                indices = [x[0] for x in conv_res]
+                samples = [x[1] for x in conv_res]
+                Compare_Signals("ecg_band_pass_filtered.txt", indices, samples)
+            else:
+                conv_res = fast_convolution(signal, h)
+                indices = [x[0] for x in conv_res]
+                samples = [x[1] for x in conv_res]
+                Compare_Signals("ecg_band_pass_filtered.txt", indices, samples)
+
+        elif (combo_filter_type.get() == "Band stop"):
+            f1 = (lower_cutoff + (transition_band / 2)) / fs
+            f2 = (upper_cutoff - (transition_band / 2)) / fs
+            for n in range(start, end + 1):
+                if wf == "rect":
+                    w = 1
+                    if n == 0:
+                        hd = 1 - 2 * (f2 - f1)
+                    else:
+                        hd = (2 * f1 * (math.sin(n * 2 * math.pi * f1) / (n * 2 * math.pi * f1))) - (2 * f2 * (math.sin(n * 2 * math.pi * f2) / (n * 2 * math.pi * f2)))
+                elif wf == "hanning":
+                    w = 0.5 + 0.5 * math.cos((2 * math.pi * n) / N)
+                    if n == 0:
+                        hd = 1 - 2 * (f2 - f1)
+                    else:
+                        hd = (2 * f1 * (math.sin(n * 2 * math.pi * f1) / (n * 2 * math.pi * f1))) - (2 * f2 * (math.sin(n * 2 * math.pi * f2) / (n * 2 * math.pi * f2)))
+                elif wf == "hamming":
+                    w = 0.54 + 0.46 * math.cos((2 * math.pi * n) / N)
+                    if n == 0:
+                        hd = 1 - 2 * (f2 - f1)
+                    else:
+                        hd = (2 * f1 * (math.sin(n * 2 * math.pi * f1) / (n * 2 * math.pi * f1))) - (2 * f2 * (math.sin(n * 2 * math.pi * f2) / (n * 2 * math.pi * f2)))
+                elif wf == "blackman":
+                    w = 0.42 + 0.5 * math.cos((2 * math.pi * n) / (N - 1)) + 0.08 * math.cos(
+                        (4 * math.pi * n) / (N - 1))
+                    if n == 0:
+                        hd = 1 - 2 * (f2 - f1)
+                    else:
+                        hd = (2 * f1 * (math.sin(n * 2 * math.pi * f1) / (n * 2 * math.pi * f1))) - (2 * f2 * (math.sin(n * 2 * math.pi * f2) / (n * 2 * math.pi * f2)))
+                h.append((n, hd * w))
+                # print(f"{n}   {hd*w}")
+            indices = [x[0] for x in h]
+            samples = [x[1] for x in h]
+            Compare_Signals("BSFCoefficients.txt", indices, samples)
+            with open('band stop coefficients.txt', 'w') as f:
+                f.write(str(h))
+
+            if conv_type == "Direct":
+                conv_res = convolution(signal, h)
+                indices = [x[0] for x in conv_res]
+                samples = [x[1] for x in conv_res]
+                Compare_Signals("ecg_band_stop_filtered.txt", indices, samples)
+            else:
+                conv_res = fast_convolution(signal, h)
+                indices = [x[0] for x in conv_res]
+                samples = [x[1] for x in conv_res]
+                Compare_Signals("ecg_band_stop_filtered.txt", indices, samples)
+
     def specifications():
         specifications_window = tk.Toplevel()
         specifications_window.title("Specifications")
-        specifications_window.geometry("350x240")
+        specifications_window.geometry("350x300")
 
         tk.Label(specifications_window, text="Sampling Frequency (Hz):").grid(row=0, column=0, padx=10, pady=5,
                                                                               sticky="w")
+        global entry_fs
         entry_fs = tk.Entry(specifications_window)
         entry_fs.grid(row=0, column=1, padx=10, pady=5)
 
-
-        if (combo_filter_type.get() == "Low" or combo_filter_type.get() == "High"):
+        if combo_filter_type.get() in ["Low", "High"]:
             tk.Label(specifications_window, text="Cut-off Frequency (Hz):").grid(row=2, column=0, padx=10, pady=5,
                                                                                  sticky="w")
+            global entry_fc
             entry_fc = tk.Entry(specifications_window)
             entry_fc.grid(row=2, column=1, padx=10, pady=5)
-
-
         else:
             tk.Label(specifications_window, text="Lower Cut-off Frequency (Hz):").grid(row=3, column=0, padx=10, pady=5,
                                                                                        sticky="w")
+            global entry_f1
             entry_f1 = tk.Entry(specifications_window)
             entry_f1.grid(row=3, column=1, padx=10, pady=5)
 
-
             tk.Label(specifications_window, text="Upper Cut-off Frequency (Hz):").grid(row=4, column=0, padx=10, pady=5,
                                                                                        sticky="w")
+            global entry_f2
             entry_f2 = tk.Entry(specifications_window)
             entry_f2.grid(row=4, column=1, padx=10, pady=5)
 
-
         tk.Label(specifications_window, text="Stop Attenuation (dB):").grid(row=5, column=0, padx=10, pady=5,
                                                                             sticky="w")
+        global entry_stop_att
         entry_stop_att = tk.Entry(specifications_window)
         entry_stop_att.grid(row=5, column=1, padx=10, pady=5)
 
-
         tk.Label(specifications_window, text="Transition Band Width (Hz):").grid(row=6, column=0, padx=10, pady=5,
                                                                                  sticky="w")
+        global entry_trans_band
         entry_trans_band = tk.Entry(specifications_window)
         entry_trans_band.grid(row=6, column=1, padx=10, pady=5)
 
+        tk.Label(specifications_window, text="Convolution Type:").grid(row=7, column=0, padx=10, pady=5,
+                                                                                 sticky="w")
+        global entry_conv_type
+        entry_conv_type = ttk.Combobox(specifications_window, values=["Direct", "Fast"],
+                                         state="readonly")
+        entry_conv_type.grid(row=7, column=1, padx=10, pady=5)
+
         # Button to design filter
         btn_design = tk.Button(specifications_window, text="Design Filter", command=design_filter)
-        btn_design.grid(row=7, column=0, columnspan=2, pady=20)
+        btn_design.grid(row=8, column=0, columnspan=2, pady=20)
 
-    # Filter type
+    # Filter type selection
     type_window = tk.Toplevel()
-    type_window.title("Filter type")
-    type_window.geometry("250x100")
+    type_window.title("Filter Type")
+    type_window.geometry("250x150")
 
     tk.Label(type_window, text="Filter Type:").grid(row=1, column=0, padx=10, pady=5, sticky="w")
+    global combo_filter_type
     combo_filter_type = ttk.Combobox(type_window, values=["Low", "High", "Band pass", "Band stop"], state="readonly")
     combo_filter_type.grid(row=1, column=1, padx=10, pady=5)
 
-    # Button to get specification
-    btn_specifications = tk.Button(type_window, text="Input specifications", command=specifications)
-    btn_specifications.grid(row=7, column=0, columnspan=2, pady=20)
+    # Button to input specifications
+    btn_specifications = tk.Button(type_window, text="Input Specifications", command=specifications)
+    btn_specifications.grid(row=2, column=0, columnspan=2, pady=20)
+
+def fast_convolution(signal1, signal2):
+    # Extract indices and values from the input lists
+    signal_indices, signal_values = zip(*signal)
+    signal2_indices, signal2_values = zip(*signal2)
+
+    # Determine the first and last indices of both signals
+    signal1_first, signal1_last = signal_indices[0], signal_indices[-1]
+    signal2_first, signal2_last = signal2_indices[0], signal2_indices[-1]
+
+    # Calculate the convolution range
+    start = signal1_first + signal2_first
+    end = signal1_last + signal2_last
+
+    # Convert start and end to integers for the range function
+    start = int(start)
+    end = int(end)
+
+    N1 = len(signal1)
+    N2 = len(signal2)
+    padded_signal1 = np.pad(signal1, (0, N1 + N2 - 1 - N1), 'constant')
+    padded_signal2 = np.pad(signal2, (0, N1 + N2 - 1 - N2), 'constant')
+
+    fft_signal1 = dft(padded_signal1)
+    fft_signal2 = dft(padded_signal2)
+
+    result_fft = fft_signal1 * fft_signal2
+
+    convolution_result = idft(result_fft).real
+    final = []
+    indices = []
+    for i,item in itertools.zip_longest(range(start,end+1),convolution_result,fillvalue=None):
+        indices.append(i)
+        final.append((i,item))
+
+    # Plot the convolution result
+    plt.plot(indices, convolution_result, marker='o', linestyle='-', color='b', label='Summed Signal')
+    plt.xlabel('Index')
+    plt.ylabel('Value')
+    plt.title('Convolution Output')
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+    return final
+
+# correlation
+def corr_Compare_Signals(file_name, Your_indices, Your_samples):
+    expected_indices = []
+    expected_samples = []
+    with open(file_name, 'r') as f:
+        line = f.readline()
+        line = f.readline()
+        line = f.readline()
+        line = f.readline()
+        while line:
+            # process line
+            L = line.strip()
+            if len(L.split(' ')) == 2:
+                L = line.split(' ')
+                V1 = int(L[0])
+                V2 = float(L[1])
+                expected_indices.append(V1)
+                expected_samples.append(V2)
+                line = f.readline()
+            else:
+                break
+    print("Current Output Test file is: ")
+    print(file_name)
+    print("\n")
+    if (len(expected_samples) != len(Your_samples)) and (len(expected_indices) != len(Your_indices)):
+        print("Shift_Fold_Signal Test case failed, your signal have different length from the expected one")
+        return
+    for i in range(len(Your_indices)):
+        if (Your_indices[i] != expected_indices[i]):
+            print("Shift_Fold_Signal Test case failed, your signal have different indicies from the expected one")
+            return
+    for i in range(len(expected_samples)):
+        if abs(Your_samples[i] - expected_samples[i]) < 0.01:
+            continue
+        else:
+            print("Correlation Test case failed, your signal have different values from the expected one")
+            return
+    print("Correlation Test case passed successfully")
 
 
-def design_filter():
-
-    return
-
+# Fliters
 def Compare_Signals(file_name,Your_indices,Your_samples):
     expected_indices=[]
     expected_samples=[]
@@ -859,17 +1127,16 @@ def Compare_Signals(file_name,Your_indices,Your_samples):
     print(file_name)
     print("\n")
     if (len(expected_samples)!=len(Your_samples)) and (len(expected_indices)!=len(Your_indices)):
-        print("Shift_Fold_Signal Test case failed, your signal have different length from the expected one")
+        print("Test case failed, your signal have different length from the expected one")
         return
     for i in range(len(Your_indices)):
         if(Your_indices[i]!=expected_indices[i]):
-            print("Shift_Fold_Signal Test case failed, your signal have different indicies from the expected one")
+            print("Test case failed, your signal have different indicies from the expected one")
             return
     for i in range(len(expected_samples)):
         if abs(Your_samples[i] - expected_samples[i]) < 0.01:
             continue
         else:
-            print("Correlation Test case failed, your signal have different values from the expected one")
+            print("Test case failed, your signal have different values from the expected one")
             return
-    print("Correlation Test case passed successfully")
-
+    print("Test case passed successfully")
